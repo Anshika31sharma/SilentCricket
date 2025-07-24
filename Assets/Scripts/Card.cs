@@ -1,53 +1,41 @@
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 public class Card : MonoBehaviour
 {
+    [Header("Card Properties")]
     public int cardId;
     public Image frontImage;
     public GameObject backSide;
-    public bool isFlipped = false;
-    public bool isMatched = false;
 
-    private void Start()
-    {
-        ShowBack();
-    }
+    private bool isFlipped = false;
+    private bool isMatched = false;
 
     public void OnCardClicked()
     {
-        if (isFlipped || isMatched) return;
+        if (isMatched || isFlipped) return;
 
-        Debug.Log($"Card clicked: {cardId}");
-        FlipToFront();
+        FlipCard();
         GameManager.Instance.OnCardSelected(this);
     }
 
-    public void FlipToFront()
+    public void FlipCard()
     {
         isFlipped = true;
-        frontImage.gameObject.SetActive(true);
-        backSide.SetActive(false);
+        if (backSide != null)
+            backSide.SetActive(false);
     }
 
     public void ResetFlip()
     {
-        if (isMatched) return;
         isFlipped = false;
-        ShowBack();
-    }
-
-    public void ShowBack()
-    {
-        frontImage.gameObject.SetActive(false);
-        backSide.SetActive(true);
+        if (backSide != null)
+            backSide.SetActive(true);
     }
 
     public void MarkAsMatched()
     {
         isMatched = true;
-        isFlipped = true;
-        frontImage.gameObject.SetActive(true);
-        backSide.SetActive(false);
     }
 }

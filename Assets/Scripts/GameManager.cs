@@ -10,13 +10,19 @@ public class GameManager : MonoBehaviour
     [Header("UI References")]
     public GridLayoutGroup grid;
     public GameObject cardPrefab;
-    public Sprite[] cardSprites; 
+    public Sprite[] cardSprites;
     public TMP_Text scoreText;
+    public TMP_Text timerText; 
 
     private List<Card> cards = new List<Card>();
     private Card firstCard, secondCard;
     private int score = 0;
     private int matchedPairs = 0;
+
+    [Header("Timer Settings")]
+    public float totalTime = 120f; 
+    private float remainingTime;
+    private bool gameEnded = false;
 
     [Header("Audio")]
     public AudioSource audioSource;
@@ -34,8 +40,13 @@ public class GameManager : MonoBehaviour
             scoreText = GameObject.Find("ScoreText")?.GetComponent<TMP_Text>();
             if (scoreText == null)
                 Debug.LogError("ScoreText TMP not found in scene!");
-            else
-                Debug.Log("ScoreText TMP auto-assigned.");
+        }
+
+        if (timerText == null)
+        {
+            timerText = GameObject.Find("TimerText")?.GetComponent<TMP_Text>();
+            if (timerText == null)
+                Debug.LogError("TimerText TMP not found in scene!");
         }
 
         if (audioSource == null)
@@ -46,58 +57,53 @@ public class GameManager : MonoBehaviour
 
     private void Start()
     {
-        if (scoreText == null)
-        {
-            Debug.LogError("ScoreText (TMP) is NOT assigned!");
-        }
-        else
-        {
+        if (scoreText != null)
             scoreText.text = "Score: 0";
-            Debug.Log("ScoreText TMP is connected.");
-        }
-
-        SetupGame(2, 2);
+ if (timerText != null)
+            timerText.text = "Time: 02:00";
+        SetupGame(4, 4); 
+        remainingTime = totalTime;
+        UpdateTimerUI();
+        InvokeRepeating(nameof(UpdateTimer), 1f, 1f);
     }
 
-    public void SetupGame(int rows, int columns)
+    private void UpdateTimer()
     {
-        Debug.Log($"SetupGame called with rows={rows}, columns={columns}");
+        if (gameEnded) return;
 
-        foreach (Transform child in grid.transform)
-            Destroy(child.gameObject);
-
-        cards.Clear();
-        grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-        grid.constraintCount = columns;
-
-        int pairsNeeded = (rows * columns) / 2;
-        List<Sprite> chosenSprites = new List<Sprite>();
-
-        for (int i = 0; i < pairsNeeded; i++)
+        remainingTime -= 1f;
+        if (remainingTime <= 0)
         {
-            Sprite sprite = cardSprites[i % cardSprites.Length];
-            chosenSprites.Add(sprite);
+            remainingTime = 0;
+            TimerEnd();
         }
-
-        chosenSprites.AddRange(chosenSprites);
-        Shuffle(chosenSprites);
-
-        for (int i = 0; i < rows * columns; i++)
-        {
-            GameObject newCard = Instantiate(cardPrefab, grid.transform);
-            Card card = newCard.GetComponent<Card>();
-            card.cardId = i;
-            card.frontImage.sprite = chosenSprites[i];
-            Debug.Log($"Assigned {chosenSprites[i].name} to card {i}");
-
-            card.backSide.SetActive(true);
-            cards.Add(card);
-        }
-
-        score = 0;
-        matchedPairs = 0;
-        UpdateScoreUI();
+        UpdateTimerUI();
     }
+
+    private void UpdateTimerUI()
+    {
+        if (timerText == null) return; 
+        int minutes = Mathf.FloorToInt(remainingTime / 60);
+        int seconds = Mathf.FloorToInt(remainingTime % 60);
+        timerText.text = $"Time: {minutes:00}:{seconds:00}";
+    }
+private void TimerEnd()
+{
+    CancelInvoke(nameof(UpdateTimer));
+    gameEnded = true;
+    Debug.Log("Time's Up!");
+
+    foreach (Transform child in grid.transform)
+    {
+        Destroy(child.gameObject);
+    }
+    if (timerText != null)
+        timerText.gameObject.SetActive(false);
+
+    if (scoreText != null)
+        scoreText.text = $"Time's Up! Final Score: {score}";
+}
+
 
     public void OnCardSelected(Card card)
     {
@@ -168,19 +174,57 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    public void SetupGame(int rows, int columns)
+    {
+        foreach (Transform child in grid.transform)
+            Destroy(child.gameObject);
+
+        cards.Clear();
+        grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+        grid.constraintCount = columns;
+
+        int pairsNeeded = (rows * columns) / 2;
+        List<Sprite> chosenSprites = new List<Sprite>();
+
+        for (int i = 0; i < pairsNeeded; i++)
+        {
+            Sprite sprite = cardSprites[i % cardSprites.Length];
+            chosenSprites.Add(sprite);
+        }
+
+        chosenSprites.AddRange(chosenSprites);
+        Shuffle(chosenSprites);
+
+        for (int i = 0; i < rows * columns; i++)
+        {
+            GameObject newCard = Instantiate(cardPrefab, grid.transform);
+            Card card = newCard.GetComponent<Card>();
+            card.cardId = i;
+            card.frontImage.sprite = chosenSprites[i];
+            card.backSide.SetActive(true);
+            cards.Add(card);
+        }
+
+        score = 0;
+        matchedPairs = 0;
+        UpdateScoreUI();
+    }
+
     private void CheckGameOver()
     {
         int totalPairs = (cards.Count) / 2;
         if (matchedPairs >= totalPairs)
         {
-            Debug.Log("Game Over! All cards matched.");
+            CancelInvoke(nameof(UpdateTimer));
+            gameEnded = true;
             PlaySound(gameOverSound);
             foreach (Transform child in grid.transform)
             {
                 Destroy(child.gameObject);
             }
             cards.Clear();
-            scoreText.text = $"Score: {score} - Game Over!";
+            if (scoreText != null)
+                scoreText.text = $"Score: {score} - Game Over!";
         }
     }
 
