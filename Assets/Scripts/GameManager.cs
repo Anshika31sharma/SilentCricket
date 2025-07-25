@@ -12,7 +12,7 @@ public class GameManager : MonoBehaviour
     public GameObject cardPrefab;
     public Sprite[] cardSprites;
     public TMP_Text scoreText;
-    public TMP_Text timerText; 
+    public TMP_Text timerText;
 
     private List<Card> cards = new List<Card>();
     private Card firstCard, secondCard;
@@ -20,7 +20,7 @@ public class GameManager : MonoBehaviour
     private int matchedPairs = 0;
 
     [Header("Timer Settings")]
-    public float totalTime = 120f; 
+    public float totalTime = 60f; 
     private float remainingTime;
     private bool gameEnded = false;
 
@@ -34,6 +34,7 @@ public class GameManager : MonoBehaviour
     private void Awake()
     {
         Instance = this;
+        totalTime = 60f;
 
         if (scoreText == null)
         {
@@ -59,9 +60,16 @@ public class GameManager : MonoBehaviour
     {
         if (scoreText != null)
             scoreText.text = "Score: 0";
- if (timerText != null)
-            timerText.text = "Time: 02:00";
-        SetupGame(4, 4); 
+
+        if (timerText != null)
+        {
+            int minutes = Mathf.FloorToInt(totalTime / 60f);
+            int seconds = Mathf.FloorToInt(totalTime % 60f);
+            timerText.text = $"Time: {minutes:00}:{seconds:00}";
+        }
+
+        SetupGame(4, 4);
+
         remainingTime = totalTime;
         UpdateTimerUI();
         InvokeRepeating(nameof(UpdateTimer), 1f, 1f);
@@ -82,7 +90,8 @@ public class GameManager : MonoBehaviour
 
     private void UpdateTimerUI()
     {
-        if (timerText == null) return; 
+        if (timerText == null) return;
+
         int minutes = Mathf.FloorToInt(remainingTime / 60);
         int seconds = Mathf.FloorToInt(remainingTime % 60);
         timerText.text = $"Time: {minutes:00}:{seconds:00}";
@@ -97,11 +106,15 @@ private void TimerEnd()
     {
         Destroy(child.gameObject);
     }
+
     if (timerText != null)
         timerText.gameObject.SetActive(false);
 
     if (scoreText != null)
-        scoreText.text = $"Time's Up! Final Score: {score}";
+    {
+        scoreText.fontSize = 30;  
+        scoreText.text = $"Time's Up!   Final Score: {score}";
+    }
 }
 
 
@@ -224,7 +237,7 @@ private void TimerEnd()
             }
             cards.Clear();
             if (scoreText != null)
-                scoreText.text = $"Score: {score} - Game Over!";
+                scoreText.text = $"Score: {score}";
         }
     }
 
